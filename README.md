@@ -85,4 +85,4 @@ powerlaw
 
 Built on top of [bioAI-Oslo/critical-nca-reservoir](https://github.com/bioAI-Oslo/critical-nca-reservoir) by Sidney Pontes-Filho et al.
 
-The mass-conservation mechanism is inspired by [MaCE](https://arxiv.org/html/2507.12306v1) (Mass-Conserving Lenia) by Etienne et al. ([github.com/frotaur/MaceLenia](https://github.com/frotaur/MaceLenia)). MaCE applies conservation laws to 2D continuous Lenia systems; here we adapt the principle to 1D discrete NCA for reservoir computing.
+The mass-conservation mechanism is inspired by MaCE (Mass-Conserving Lenia) by Etienne et al. (github.com/frotaur/MaceLenia). MaCE applies conservation laws to 2D continuous Lenia systems; here we adapt the principle to 1D discrete NCA for reservoir computing.
