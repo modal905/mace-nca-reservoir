@@ -17,6 +17,9 @@ def plot_loss(folder_path):
 
   fitness *= -1
 
+  if fitness.ndim == 1:
+    fitness = fitness.reshape(1, -1)
+
   x = np.arange(fitness.shape[0])
 
   # Fitness plot

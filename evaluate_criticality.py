@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import tensorflow as tf
 from critical_nca import CriticalNCA
 import powerlaw
 from sklearn.linear_model import LinearRegression
@@ -292,10 +293,23 @@ def evaluate_result(ca_result, filename=None):
   return fitness, val_dict
 
 def powerlaw_stats(data, args, fname, timestr):
-  data.remove(max(data))
-  d = np.array(data)
+  if data is None or len(data) == 0:
+    print(f"Skipping powerlaw stats for {fname}: empty data")
+    return
 
-  fit = powerlaw.Fit(d, discrete=True)
+  d = np.asarray(data, dtype=np.int64)
+  if d.size > 1:
+    d = np.delete(d, np.argmax(d))
+
+  if d.size == 0:
+    print(f"Skipping powerlaw stats for {fname}: no data after filtering")
+    return
+
+  try:
+    fit = powerlaw.Fit(d, discrete=True)
+  except Exception as err:
+    print(f"Skipping powerlaw stats for {fname}: fit failed ({err})")
+    return
   print()
   print("alpha", fit.power_law.alpha)
   print("xmin", fit.power_law.xmin)
@@ -303,13 +317,18 @@ def powerlaw_stats(data, args, fname, timestr):
   print("KSdist", fit.power_law.D)
   print("fit.distribution_compare('power_law', 'exponential')", fit.distribution_compare('power_law', 'exponential', normalized_ratio=True))
   print("fit.distribution_compare('power_law', 'lognormal')", fit.distribution_compare('power_law', 'lognormal', normalized_ratio=True))
-  gof = goodness_of_fit(fit, data, xmin=fit.power_law.xmin)
+  gof = goodness_of_fit(fit, d.tolist(), xmin=fit.power_law.xmin)
   print("goodness_of_fit(fit, data)", gof)
   print()
   fig, ax = plt.subplots()
 
-  fit.plot_pdf(color = "b", linewidth=2, ax =ax, label="Avalanche (samples=%d)"% len(d))
-  fit.power_law.plot_pdf(color = "k", linestyle = "--", ax =ax, label=r"Fit ($\hat{\alpha}$="+"%.1f, $p$-value=%.2f)" % (fit.power_law.alpha, gof))
+  try:
+    fit.plot_pdf(color = "b", linewidth=2, ax =ax, label="Avalanche (samples=%d)"% len(d))
+    fit.power_law.plot_pdf(color = "k", linestyle = "--", ax =ax, label=r"Fit ($\hat{\alpha}$="+"%.1f, $p$-value=%.2f)" % (fit.power_law.alpha, gof))
+  except Exception as err:
+    print(f"Skipping plot_pdf for {fname}: {err}")
+    plt.close('all')
+    return
 
   ax.legend()
   ax.set_xlabel("$x$")
@@ -324,13 +343,16 @@ def powerlaw_stats(data, args, fname, timestr):
   plt.close('all')
 
   fig, ax = plt.subplots()
-  pdf = np.bincount(data)
+  pdf = np.bincount(d)
   pdf = pdf / sum(pdf)
   x = np.linspace(1,len(pdf),len(pdf))
   print(x[pdf > 0])
   print(pdf[pdf > 0])
-  ax.scatter(x[pdf > 0], pdf[pdf > 0], c='b', label="Avalanche (samples=%d)"% len(data))
-  fit.power_law.plot_pdf(color = "k", linestyle = "--", ax =ax, label=r"Fit ($\hat{\alpha}$="+"%.1f, $p$-value=%.2f)" % (fit.power_law.alpha, gof))
+  ax.scatter(x[pdf > 0], pdf[pdf > 0], c='b', label="Avalanche (samples=%d)"% len(d))
+  try:
+    fit.power_law.plot_pdf(color = "k", linestyle = "--", ax =ax, label=r"Fit ($\hat{\alpha}$="+"%.1f, $p$-value=%.2f)" % (fit.power_law.alpha, gof))
+  except Exception as err:
+    print(f"Skipping fitted curve overlay for {fname}: {err}")
 
   ax.legend()
   ax.set_xlabel("$x$")
@@ -453,6 +475,12 @@ def plot_ca_result_test(ca_result, args, gen):
   powerlaw_stats(avalanche_t_1, args, "avalanche_t_1", "")
 
 def evaluate_nca(flat_weights, args, gen=None, test=None):
+  global width, timesteps
+  if hasattr(args, "ca_width") and args.ca_width:
+    width = int(args.ca_width)
+  if hasattr(args, "ca_timesteps") and args.ca_timesteps:
+    timesteps = int(args.ca_timesteps)
+
   nca = CriticalNCA()
   weight_shape_list, weight_amount_list, _ = utils.get_weights_info(nca.weights)
   shaped_weight = utils.get_model_weights(flat_weights, weight_amount_list,
@@ -467,6 +495,7 @@ def evaluate_nca(flat_weights, args, gen=None, test=None):
   x_history = [x[0,:,0]]
   for t in range(timesteps-1):
     x = nca(x)
+    x = apply_conservation(x, args)
     x_history.append(x[0,:,0])
 
   x_history_arr = np.array(x_history)
@@ -486,3 +515,24 @@ def evaluate_nca(flat_weights, args, gen=None, test=None):
 
 
   return -1*fitness, val_dict
+
+def apply_conservation(x, args):
+  if not (hasattr(args, "conserve") and args.conserve):
+    return x
+
+  x_tensor = tf.convert_to_tensor(x, dtype=tf.float32)
+  visible = x_tensor[:, :, 0]
+
+  beta = float(getattr(args, "conserve_beta", 1.0))
+  affinity = visible
+  exp_affinity = tf.exp(beta * affinity)
+
+  # 1D local redistribution on circular neighborhood {i-1, i, i+1}
+  normalizer = tf.roll(exp_affinity, shift=1, axis=1) + exp_affinity + tf.roll(exp_affinity, shift=-1, axis=1)
+  source_mass = visible / (normalizer + 1e-8)
+  redistributed_visible = exp_affinity * (
+      source_mass + tf.roll(source_mass, shift=1, axis=1) + tf.roll(source_mass, shift=-1, axis=1)
+  )
+
+  x_conserved = tf.concat([redistributed_visible[:, :, tf.newaxis], x_tensor[:, :, 1:]], axis=2)
+  return x_conserved

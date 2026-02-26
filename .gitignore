@@ -1,0 +1,23 @@
+# Training runs — large checkpoint/log data
+baseline_run_2/
+conserving_run_2/
+checkpoint/
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Logs
+*.log
+
+# Results — keep PNGs, exclude large files
+results/*.csv
+results/*.npy
+results/*.gif
+
+# OS
+.DS_Store
+Thumbs.db

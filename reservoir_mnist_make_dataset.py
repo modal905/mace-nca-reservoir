@@ -1,4 +1,5 @@
 import os
+import inspect
 import tensorflow as tf
 import numpy as np
 from critical_nca import CriticalNCA
@@ -14,22 +15,11 @@ plt.rcParams.update({'font.size': 14})
 def get_nca(args, ckpt=""):
   print("Testing checkpoint saved in: " + args.log_dir)
 
-  del args.nca_model["built"]
-  del args.nca_model["inputs"]
-  del args.nca_model["outputs"]
-  del args.nca_model["input_names"]
-  del args.nca_model["output_names"]
-  del args.nca_model["stop_training"]
-  del args.nca_model["history"]
-  del args.nca_model["compiled_loss"]
-  del args.nca_model["compiled_metrics"]
-  del args.nca_model["optimizer"]
-  del args.nca_model["train_function"]
-  del args.nca_model["test_function"]
-  del args.nca_model["predict_function"]
-  del args.nca_model["channel_n"]
+  valid_keys = set(inspect.signature(CriticalNCA.__init__).parameters.keys())
+  valid_keys.discard("self")
+  model_kwargs = {k: v for k, v in args.nca_model.items() if k in valid_keys}
 
-  nca = CriticalNCA(**args.nca_model)
+  nca = CriticalNCA(**model_kwargs)
   nca.dmodel.summary()
 
   ckpt_filename = ""
@@ -103,10 +93,8 @@ def train_readout(args):
   with open('mnist_x_train_v2.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     for i, img in enumerate(x_train):
-      if i > 10:
-        break
-      print(i)
-      
+      if i % 1000 == 0:
+        print(f"{i}/{len(x_train)}")
       nca_output = get_nca_output_v2(nca, img, width, timesteps)
       nca_output_arr = np.array(nca_output).reshape(-1).astype(np.uint8)
       writer.writerow(nca_output_arr)
@@ -114,9 +102,8 @@ def train_readout(args):
   with open('mnist_x_test_v2.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     for i, img in enumerate(x_test):
-      if i > 10:
-        break
-      print(i)
+      if i % 1000 == 0:
+        print(f"{i}/{len(x_test)}")
       nca_output = get_nca_output_v2(nca, img, width, timesteps)
       nca_output_arr = np.array(nca_output).reshape(-1).astype(np.uint8)
       writer.writerow(nca_output_arr)
@@ -131,6 +118,7 @@ if __name__ == "__main__":
     args_filename = os.path.join(p_args.logdir, "args.json")
     argsio = utils.ArgsIO(args_filename)
     args = argsio.load_json()
+    args.log_dir = p_args.logdir  # use actual dir, not the path stored in args.json
 
     train_readout(args)
 

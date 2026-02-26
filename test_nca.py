@@ -5,28 +5,17 @@ Test NCA for criticality.
 from critical_nca import CriticalNCA
 import utils
 import os
+import inspect
 from evaluate_criticality import evaluate_nca
 
 def test(args, gen, ckpt):
   print("Testing checkpoint saved in: " + args.log_dir)
 
-  del args.nca_model["built"]
-  del args.nca_model["inputs"]
-  del args.nca_model["outputs"]
-  del args.nca_model["input_names"]
-  del args.nca_model["output_names"]
-  del args.nca_model["stop_training"]
-  del args.nca_model["history"]
-  del args.nca_model["compiled_loss"]
-  del args.nca_model["compiled_metrics"]
-  del args.nca_model["optimizer"]
-  del args.nca_model["train_function"]
-  del args.nca_model["test_function"]
-  del args.nca_model["predict_function"]
-  del args.nca_model["channel_n"]
-  # del args.nca_model["padding_size"]
+  valid_keys = set(inspect.signature(CriticalNCA.__init__).parameters.keys())
+  valid_keys.discard("self")
+  model_kwargs = {k: v for k, v in args.nca_model.items() if k in valid_keys}
 
-  nca = CriticalNCA(**args.nca_model)
+  nca = CriticalNCA(**model_kwargs)
   nca.dmodel.summary()
 
   ckpt_filename = ""
@@ -52,12 +41,17 @@ if __name__ == "__main__":
   parser.add_argument("--logdir", help="path to log directory")
   parser.add_argument("--ckpt", default="", help="path to log directory")
   parser.add_argument('--repeat', default=1, type=int)
+  parser.add_argument('--width', default=None, type=int, help="Override ca_width for evaluation")
   p_args = parser.parse_args()
 
   if p_args.logdir:
     args_filename = os.path.join(p_args.logdir, "args.json")
     argsio = utils.ArgsIO(args_filename)
     args = argsio.load_json()
+    if p_args.width is not None:
+      args.ca_width = p_args.width
+      print(f"Overriding ca_width to {p_args.width}")
+    args.log_dir = p_args.logdir  # use actual dir, not the path stored in args.json
     for i in range(p_args.repeat):
       print(i)
       test(args, i+1, p_args.ckpt)

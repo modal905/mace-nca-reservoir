@@ -1,5 +1,6 @@
 """
-Train NCA towards criticality with CMA-ES.
+Train NCA towards criticality with CMA-ES — mass-conserving variant.
+Conservation is always enabled; logs saved under logs/train_nca_conserve/.
 """
 import numpy as np
 from critical_nca import CriticalNCA
@@ -141,9 +142,9 @@ if __name__ == "__main__":
   args.retrain = p_args.retrain
   args.ca_width = p_args.width
   args.ca_timesteps = p_args.timesteps
-  args.conserve = False
+  args.conserve = True  # always enabled in this script
   args.saveall = p_args.saveall
   args.cma_seed = p_args.seed
-  args.overflow_weight = 0#0.1
+  args.overflow_weight = 0
 
   train(args)
