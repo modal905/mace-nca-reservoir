@@ -18,6 +18,9 @@ results/*.csv
 results/*.npy
 results/*.gif
 
+# Reports (shared via Google Docs, not tracked in git)
+MaCE NCA-RC*.md
+
 # OS
 .DS_Store
 Thumbs.db
