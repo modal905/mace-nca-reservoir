@@ -1,0 +1,9 @@
+2026-03-02 10:43:23.559917: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2026-03-02 10:43:23.561275: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+Loading train features: results\mnist_x_train_conserving.csv
+  shape: (60000, 3136)
+Loading test features:  results\mnist_x_test_conserving.csv
+  shape: (10000, 3136)
+
+©¤©¤ Training LinearSVC [conserving_nca] ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+   Train: (60000, 3136)  |  Test: (10000, 3136)

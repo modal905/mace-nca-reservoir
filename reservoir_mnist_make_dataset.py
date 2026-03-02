@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score
 import csv
+from evaluate_criticality import apply_conservation
 
 plt.rcParams.update({'font.size': 14})
 
@@ -38,7 +39,11 @@ def get_nca(args, ckpt=""):
   return nca
 
 
-def get_nca_output(nca, img, width, timesteps, img_num_pixel):
+def _maybe_numpy(x):
+  return x.numpy() if isinstance(x, tf.Tensor) else x
+
+
+def get_nca_output(nca, img, width, timesteps, img_num_pixel, args=None):
   x = np.zeros((1, width, nca.channel_n),
                dtype=np.float32)
 
@@ -47,6 +52,8 @@ def get_nca_output(nca, img, width, timesteps, img_num_pixel):
   x_history = [x[0,:,0]]
   for t in range(timesteps-1):
     x = nca(x).numpy()
+    if args is not None:
+      x = _maybe_numpy(apply_conservation(x, args))
     x_history.append(x[0,:,0])
     if t < img_num_pixel:
       x[0, width//2, 0] = img[t]
@@ -55,7 +62,7 @@ def get_nca_output(nca, img, width, timesteps, img_num_pixel):
 
   return x_history_arr
 
-def get_nca_output_v2(nca, img, width, timesteps):
+def get_nca_output_v2(nca, img, width, timesteps, args=None):
   x = np.zeros((1, width, nca.channel_n),
                dtype=np.float32)
 
@@ -64,6 +71,8 @@ def get_nca_output_v2(nca, img, width, timesteps):
   x_history = [x[0,:,0]]
   for t in range(timesteps-1):
     x = nca(x).numpy()
+    if args is not None:
+      x = _maybe_numpy(apply_conservation(x, args))
     x_history.append(x[0,:,0])
 
   x_history_arr = np.array(x_history)
@@ -95,7 +104,7 @@ def train_readout(args):
     for i, img in enumerate(x_train):
       if i % 1000 == 0:
         print(f"{i}/{len(x_train)}")
-      nca_output = get_nca_output_v2(nca, img, width, timesteps)
+      nca_output = get_nca_output_v2(nca, img, width, timesteps, args=args)
       nca_output_arr = np.array(nca_output).reshape(-1).astype(np.uint8)
       writer.writerow(nca_output_arr)
 
@@ -104,7 +113,7 @@ def train_readout(args):
     for i, img in enumerate(x_test):
       if i % 1000 == 0:
         print(f"{i}/{len(x_test)}")
-      nca_output = get_nca_output_v2(nca, img, width, timesteps)
+      nca_output = get_nca_output_v2(nca, img, width, timesteps, args=args)
       nca_output_arr = np.array(nca_output).reshape(-1).astype(np.uint8)
       writer.writerow(nca_output_arr)
 

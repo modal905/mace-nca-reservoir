@@ -31,12 +31,13 @@ def load_mnist_labels():
 
 def load_nca_features(train_csv, test_csv):
     """Load NCA reservoir feature CSVs produced by reservoir_mnist_make_dataset.py."""
+    import pandas as pd
     print(f"Loading train features: {train_csv}")
-    x_train = np.genfromtxt(train_csv, delimiter=',', dtype=np.float32)
+    x_train = pd.read_csv(train_csv, header=None).values.astype(np.float32)
     print(f"  shape: {x_train.shape}")
 
     print(f"Loading test features:  {test_csv}")
-    x_test = np.genfromtxt(test_csv, delimiter=',', dtype=np.float32)
+    x_test = pd.read_csv(test_csv, header=None).values.astype(np.float32)
     print(f"  shape: {x_test.shape}")
 
     return x_train, x_test
