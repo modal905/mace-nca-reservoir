@@ -13,9 +13,10 @@ This project extends [Sidney et al.'s critical-nca-reservoir](https://github.com
 | Training fitness (best-ever) | 3.5675 | **3.9958** |
 | First generation to cross fitness 3.0 | ~gen 470 | **gen 53** (8.9x faster) |
 | SOC score (`norm_linscore_res`) | 0.667 | **0.912** (+36.7%) |
-| MNIST reservoir accuracy | 93.47%* | **93.72%** |
+| MNIST reservoir accuracy | 93.35%* | **94.12%*** (+0.77 pp) |
+| MNIST LinearSVC fit time | 1034s | **507s** (~2× faster) |
 
-*Baseline LinearSVC not fully converged (lower bound).
+*Both runs hit the LinearSVC convergence limit (lower bounds). Results from a corrected end-to-end pipeline where mass-conservation is applied consistently during both training and MNIST feature extraction.
 
 ---
 
