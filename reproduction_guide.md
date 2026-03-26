@@ -12,8 +12,10 @@ This guide walks you through the full workflow for our project on Reservoir Comp
 5. [Testing a Trained Checkpoint](#5-testing-a-trained-checkpoint)
 6. [Task 1: 5-bit Memory](#6-task-1-5-bit-memory-task)
 7. [Task 2: MNIST Classification](#7-task-2-mnist-classification)
-8. [Expected Results](#8-expected-results)
-9. [Troubleshooting](#9-troubleshooting)
+8. [Task 3: CartPole Temporal Control](#8-task-3-cartpole-temporal-control)
+9. [GOF Sweep (Checkpoint Criticality Evaluation)](#9-gof-sweep)
+10. [Expected Results](#10-expected-results)
+11. [Troubleshooting](#11-troubleshooting)
 
 ---
 
@@ -477,62 +479,101 @@ Testing model with lowest training loss...
 
 ---
 
-## 8. Expected Results
+## 8. Task 3: CartPole Temporal Control
 
-### Criticality Training (width=100, timesteps=100, 500 gens, seed=671052)
+### 8.1 Overview
+- **Goal**: Balance a pole on a cart for as many timesteps as possible
+- **Environment**: CartPole-v1 (OpenAI Gym)
+- **Approach**: NCA reservoir as state encoder → Q-learning agent
+- **Expected Result**: Conserve variant leads on average (~120 vs ~89 mean reward)
 
-Results confirmed across **2 independent trials** (Run 1: Feb 21, Run 2: Feb 22) on a 32-core Xeon Gold 6459C, popsize=96, threads=30.
+### 8.2 Step-by-Step Execution
 
-| Run | Trial | Bestever fitness | Final ckpt fitness | Runtime | CA values |
-|-----|-------|-----------------|-------------------|---------|-----------|
-| Baseline (`train_nca.py`) | Run 1 | 3.6272 | 2.9982 | 1474 s (~24 min) | binary `[0. 1.]` |
-| Baseline (`train_nca.py`) | Run 2 | 3.5675 | 2.7553 | 1299 s (~22 min) | binary `[0. 1.]` |
-| Conserving (`train_nca_conserve.py`) | Run 1 | 3.9958 | 3.9268 | 1004 s (~17 min) | continuous |
-| Conserving (`train_nca_conserve.py`) | Run 2 | **3.9958** | **3.9268** | **1004 s (~17 min)** | continuous |
+#### Step 1: Train Q-learning Agent
 
-**Summary (confirmed range):**
-
-| Script | Bestever range | Reproducibility |
-|--------|---------------|-----------------|
-| `train_nca.py` (baseline) | 3.57 – 3.63 | ±1.7% variance from non-deterministic thread ordering |
-| `train_nca_conserve.py` (conserving) | **3.9958 exact** | Bit-for-bit identical across both runs |
-
-Key observations:
-- The conserving variant converges ~30% faster and achieves ~10% higher fitness.
-- Baseline variance (~1.7%) is explained by non-deterministic CMA-ES worker thread ordering; the CMA-ES seed fixes the initial solution and step-size but not inter-thread evaluation ordering.
-- Conserving run results are **perfectly reproducible** — identical bestever, final fitness, and runtime across both trials.
-- Both variants produce `fitness > 3.0`, which is the practical threshold for meaningful avalanche statistics.
-
-### Author's checkpoint (width=1000, timesteps=1000)
-
-| Checkpoint | Fitness at width=3 | Fitness at width=1000 |
-|------------|-------------------|-----------------------|
-| `000109_2.9656005.ckpt` | 0 (gate condition impossible) | **~2.83** |
-
-The `checkpoint/args.json` records `ca_width: 3` as a misleading artifact — the actual training used `width=1000`.
-
-### Downstream Tasks
-
-| Task | Metric | Expected Value | What Success Looks Like |
-|------|--------|----------------|------------------------|
-| **5-bit Memory** | Accuracy | 100% | All 10 trials score 1.0 |
-| **MNIST** | Accuracy | 90-95% | Matches Rule 30 baseline |
-
-### 5-bit Memory Success Criteria
-```
-Console output: "Successes: 10" (or 10/10 trials perfect)
-Score per trial: 1.0 (100%)
+```bash
+python reservoir_cartpole_train_qlearning.py \
+  --logdir <path_to_trained_nca_logdir> \
+  --ckpt <checkpoint_file.ckpt>
 ```
 
-### MNIST Success Criteria
+This trains a Q-learning agent using the NCA reservoir for state encoding. Output is a `.pkl` model file.
+
+#### Step 2: Evaluate Agent
+
+```bash
+python reservoir_cartpole_evaluate_rl.py \
+  --logdir <path_to_trained_nca_logdir> \
+  --model <path_to_model.pkl>
 ```
-Console output: Accuracy >= 0.90 (90%)
-Comparison: Should match or exceed Rule 30 performance
-```
+
+Evaluates over 100 episodes and reports mean reward and standard deviation. Results are saved to a CSV file.
 
 ---
 
-## 9. Troubleshooting
+## 9. GOF Sweep (Checkpoint Criticality Evaluation)
+
+### 9.1 Overview
+
+The GOF (Goodness-of-Fit) sweep evaluates criticality across all saved checkpoints for a training run. This identifies which checkpoints achieve perfect criticality (6/6 GOF passes across 6 avalanche distributions).
+
+### 9.2 Running a Sweep
+
+```bash
+# Baseline
+bash run_gof_baseline.sh <logdir>
+
+# Conserving
+bash run_gof_conserve.sh <logdir>
+```
+
+Or manually:
+
+```bash
+python batch_gof_eval.py --logdir <logdir> --conserve
+python summarize_gof.py --logdir <logdir>
+```
+
+### 9.3 Interpreting Results
+
+`summarize_gof.py` outputs a table of checkpoints with their GOF pass counts. A checkpoint with 6/6 passes has statistically validated power-law avalanche distributions — the signature of self-organised criticality.
+
+---
+
+## 10. Expected Results
+
+### Full-scale results (W=1000, T=1000, 500 gens, seeds 42/43/44)
+
+All results from 3 independent seeds on 32-core Xeon Gold 6459C, popsize=96, threads=30.
+
+| Metric | Baseline NCA | Mass-Conserving NCA | Δ |
+|--------|-------------|---------------------|---|
+| Mean training fitness | 3.82 | **4.10** | +7.3% |
+| Mean GOF passes (out of 6) | 2.3 | **5.0** | +117% |
+| Perfect criticality (6/6 GOF) | 0/3 seeds | **2/3 seeds** | — |
+| Training time (mean) | 47.2h | **37.1h** | 1.27× faster |
+| 5-bit memory accuracy | 1.0 | 1.0 | Tie |
+| MNIST accuracy (mean) | **93.81%** | 93.54% | −0.27 pp |
+| CartPole mean reward | 88.6 | **120.6** | +36% |
+
+**Notes:**
+- CartPole and MNIST use **best-GOF checkpoints** for baseline seeds 43 & 44 (gen 201 and gen 492 respectively).
+- Conserve seeds 43 & 44 naturally achieve 6/6 GOF at gen-499 without checkpoint hunting.
+- Conservation makes criticality a stable property of the final solution rather than a fragile transient.
+
+### Small-scale sanity check (W=100, T=100)
+
+For quick validation before full-scale runs:
+
+| Metric | Baseline | Conserving |
+|--------|----------|------------|
+| Bestever fitness | 3.57–3.63 | 3.9958 |
+| Runtime (500 gens) | ~24 min | ~17 min |
+| CA values | binary [0, 1] | continuous |
+
+---
+
+## 11. Troubleshooting
 
 ### Issue 1: TensorFlow Version Conflicts
 

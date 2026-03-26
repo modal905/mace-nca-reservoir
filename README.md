@@ -8,15 +8,19 @@ This project extends [Sidney et al.'s critical-nca-reservoir](https://github.com
 
 ## Key Results
 
-| Metric | Baseline NCA | Mass-Conserving NCA |
-|--------|-------------|---------------------|
-| Training fitness (best-ever) | 3.5675 | **3.9958** |
-| First generation to cross fitness 3.0 | ~gen 470 | **gen 53** (8.9x faster) |
-| SOC score (`norm_linscore_res`) | 0.667 | **0.912** (+36.7%) |
-| MNIST reservoir accuracy | 93.35%* | **94.12%*** (+0.77 pp) |
-| MNIST LinearSVC fit time | 1034s | **507s** (~2× faster) |
+All results from 3 independent seeds (42, 43, 44), W=1000, T=1000, 500 generations.
 
-*Both runs hit the LinearSVC convergence limit (lower bounds). Results from a corrected end-to-end pipeline where mass-conservation is applied consistently during both training and MNIST feature extraction.
+| Metric | Baseline NCA | Mass-Conserving NCA | Δ |
+|--------|-------------|---------------------|---|
+| Mean training fitness | 3.82 | **4.10** | +7.3% |
+| Mean GOF passes (out of 6) | 2.3 | **5.0** | +117% |
+| Perfect criticality (6/6 GOF) | 0/3 seeds | **2/3 seeds** | — |
+| Training time | 47.2h | **37.1h** | 1.27× faster |
+| 5-bit memory accuracy | 1.0 | 1.0 | Tie |
+| MNIST accuracy | **93.81%** | 93.54% | −0.27 pp |
+| CartPole mean reward | 88.6 | **120.6** | +36% |
+
+Conservation produces stronger criticality and faster convergence. Downstream task performance is at parity or better — the conserving variant leads on temporal control (CartPole) after best-GOF checkpoint selection.
 
 ---
 
@@ -29,18 +33,28 @@ At each timestep, cell activations are redistributed via a two-step donate-then-
 ## Project Structure
 
 ```
-critical_nca.py                  # NCA model definition
-train_nca.py                     # Baseline NCA training (CMA-ES)
-train_nca_conserve.py            # Mass-conserving NCA training
-evaluate_criticality.py          # SOC evaluation (avalanche statistics)
-test_nca.py                      # Checkpoint evaluation
-reservoir_mnist_make_dataset.py  # Generate NCA reservoir features for MNIST
-reservoir_mnist_classify.py      # LinearSVC readout on NCA features
-make_animation.py                # Generate CA dynamics animations
-plot_comparison.py               # Training curve comparison figure
-plot_soc_comparison.py           # SOC / avalanche comparison figure
-reproduction_guide.md            # Step-by-step reproduction instructions
-results/                         # Output figures
+critical_nca.py                       # NCA model definition
+train_nca.py                          # Baseline NCA training (CMA-ES)
+train_nca_conserve.py                 # Mass-conserving NCA training
+evaluate_criticality.py               # SOC evaluation & apply_conservation()
+test_nca.py                           # Checkpoint evaluation
+reservoir_mnist_make_dataset.py       # Generate NCA reservoir features for MNIST
+reservoir_mnist_classify.py           # LinearSVC readout on NCA features
+reservoir_X-bit_make_dataset.py       # 5-bit memory dataset preparation
+ReCA_X-bit_memory_NCA.py              # 5-bit memory task (NCA variant)
+reservoir_cartpole_train_qlearning.py # CartPole Q-learning with NCA reservoir
+reservoir_cartpole_evaluate_rl.py     # CartPole evaluation (100 episodes)
+batch_gof_eval.py                     # GOF sweep across checkpoints
+summarize_gof.py                      # Aggregate GOF results
+diagnose_reservoir.py                 # Reservoir dynamics diagnostics
+make_animation.py                     # Generate CA dynamics animations
+plot_comparison.py                    # Training curve comparison figure
+plot_soc_comparison.py                # SOC / avalanche comparison figure
+run_mnist_all_seeds.sh                # Batch MNIST runs (3 seeds)
+run_5bit_all_seeds.sh                 # Batch 5-bit runs (3 seeds)
+run_gof_baseline.sh / run_gof_conserve.sh  # GOF sweep scripts
+reproduction_guide.md                 # Step-by-step reproduction instructions
+results/                              # Output figures
 ```
 
 ---
@@ -49,19 +63,25 @@ results/                         # Output figures
 
 See [reproduction_guide.md](reproduction_guide.md) for full step-by-step instructions.
 
-**Train mass-conserving NCA:**
+**Train mass-conserving NCA (author scale):**
 ```bash
-python train_nca_conserve.py --ca_width 100 --ca_timesteps 100 --num_generations 500
+python train_nca_conserve.py --maxgen 500 --popsize 96 --threads 30 \
+  --width 1000 --timesteps 1000 --seed 42
 ```
 
-**Generate animations:**
+**Evaluate downstream tasks:**
 ```bash
-python make_animation.py \
-  --baseline_logdir   <path_to_baseline_logdir> \
-  --baseline_ckpt     <best_checkpoint.ckpt> \
-  --conserving_logdir <path_to_conserving_logdir> \
-  --conserving_ckpt   <best_checkpoint.ckpt> \
-  --width 100 --timesteps 100 --fps 10 --scale 6
+# 5-bit memory
+python reservoir_X-bit_make_dataset.py --logdir <logdir> --ckpt <ckpt>
+python ReCA_X-bit_memory_NCA.py
+
+# MNIST classification
+python reservoir_mnist_make_dataset.py --logdir <logdir>
+python reservoir_mnist_classify.py
+
+# CartPole reinforcement learning
+python reservoir_cartpole_train_qlearning.py --logdir <logdir> --ckpt <ckpt>
+python reservoir_cartpole_evaluate_rl.py --logdir <logdir> --model <model.pkl>
 ```
 
 ---
@@ -84,6 +104,8 @@ powerlaw
 
 ## Credits
 
-Built on top of [bioAI-Oslo/critical-nca-reservoir](https://github.com/bioAI-Oslo/critical-nca-reservoir) by Sidney et al.
+Built on top of [bioAI-Oslo/critical-nca-reservoir](https://github.com/bioAI-Oslo/critical-nca-reservoir) by Sidney Pontes-Filho et al.
 
-The mass-conservation mechanism is inspired by MaCE (Mass-Conserving Lenia) by Etienne et al. (github.com/frotaur/MaceLenia). MaCE applies conservation laws to 2D continuous Lenia systems; here we adapt the principle to 1D discrete NCA for reservoir computing.
+The mass-conservation mechanism is inspired by MaCE (Mass-Conserving Lenia) by Etienne Guichard et al. MaCE applies conservation laws to 2D continuous Lenia systems; here we adapt the principle to 1D discrete NCA for reservoir computing.
+
+**Paper:** T. Zhang, E. Guichard, S. Pontes-Filho, S. Nichele. *Mass Conservation as an Inductive Bias for Self-Organized Criticality in NCA Reservoirs.* ALIFE 2026.
