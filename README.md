@@ -107,5 +107,3 @@ powerlaw
 Built on top of [bioAI-Oslo/critical-nca-reservoir](https://github.com/bioAI-Oslo/critical-nca-reservoir) by Sidney Pontes-Filho et al.
 
 The mass-conservation mechanism is inspired by MaCE (Mass-Conserving Lenia) by Etienne Guichard et al. MaCE applies conservation laws to 2D continuous Lenia systems; here we adapt the principle to 1D discrete NCA for reservoir computing.
-
-**Paper:** T. Zhang, E. Guichard, S. Pontes-Filho, S. Nichele. *Mass Conservation as an Inductive Bias for Self-Organized Criticality in NCA Reservoirs.* ALIFE 2026.
