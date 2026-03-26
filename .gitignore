@@ -3,14 +3,9 @@ baseline_run_2/
 conserving_run_2/
 checkpoint/
 logs/
-baseline_rerun_seed43&44/
 
 # Phase 2 working copies (nested repos)
 critical-nca-reservoir-Phase 2/
-
-# Experiment output logs
-5bit_memory/
-nca *.txt
 
 # Python
 __pycache__/
