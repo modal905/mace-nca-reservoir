@@ -3,6 +3,14 @@ baseline_run_2/
 conserving_run_2/
 checkpoint/
 logs/
+baseline_rerun_seed43&44/
+
+# Phase 2 working copies (nested repos)
+critical-nca-reservoir-Phase 2/
+
+# Experiment output logs
+5bit_memory/
+nca *.txt
 
 # Python
 __pycache__/
@@ -17,9 +25,11 @@ __pycache__/
 results/*.csv
 results/*.npy
 results/*.gif
+results/*.txt
 
-# Reports (shared via Google Docs, not tracked in git)
+# Progress reports (shared via Google Docs / local only)
 MaCE NCA-RC*.md
+PHASE2_BASELINE_VS_CONSERVE_SUMMARY.md
 
 # OS
 .DS_Store

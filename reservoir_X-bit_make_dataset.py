@@ -1,4 +1,4 @@
-import os
+﻿import os
 import tensorflow as tf
 import numpy as np
 from critical_nca import CriticalNCA
@@ -25,13 +25,14 @@ from datetime import datetime
 # import evodynamic.connection as connection
 # import evodynamic.cells.activation as act
 from sklearn.svm import SVC
-import helpers.helper as helper
+import helper
 from PIL import Image
+from evaluate_criticality import apply_conservation
 
 plt.rcParams.update({'font.size': 14})
 
 class ReservoirMemorySingleExperiment:
-    def __init__(self, bits, r, itr, r_total_width, d_period, ca_rule, nca):
+    def __init__(self, bits, r, itr, r_total_width, d_period, ca_rule, nca, args=None):
 
         self.recurrence = r
         self.iterations_between_input = itr + 1
@@ -53,6 +54,7 @@ class ReservoirMemorySingleExperiment:
         # self.evo_exp = evo[0]
         # self.input_connections = evo[1]
         self.nca = nca
+        self.args = args
 
         self.current_state = np.zeros((1, self.ca_width, self.nca.channel_n), dtype=np.float32)
 
@@ -139,16 +141,15 @@ class ReservoirMemorySingleExperiment:
 
     def run_bit_string(self, input_array, evaluate):
         short_term_history = np.zeros((self.reservoir_height, self.ca_width*self.nca.channel_n), dtype=int).tolist()
-        grid_ca = np.zeros((self.ca_height, self.ca_width, self.nca.channel_n))
 
         input_streams = self.create_input_streams(input_array)
         output_streams_labels = self.create_output_streams(input_array)
         self.current_state = np.zeros_like(self.current_state)
 
         for i in range(0, self.ca_height):
-            self.run_step(i, input_streams, output_streams_labels, short_term_history, grid_ca, evaluate)
+            self.run_step(i, input_streams, output_streams_labels, short_term_history, evaluate)
 
-    def run_step(self, i, input_streams, output_streams_labels, short_term_history, grid_ca, evaluate):
+    def run_step(self, i, input_streams, output_streams_labels, short_term_history, evaluate):
         # g_ca_bin_current = self.evo_exp.get_group_cells_state("g_ca", "g_ca_bin")
         # step = np.zeros(self.ca_width)
         # if len(short_term_history) > 0:
@@ -186,15 +187,13 @@ class ReservoirMemorySingleExperiment:
                 if predicted_class[0] == correct_answer_class:
                     self.correct_predictions += 1
 
-        if i < self.ca_height:
-            grid_ca[i] = step[0]#.flatten()
-        else:
-            grid_ca = np.vstack((grid_ca[1:], step[0])) #step[0, :, 0].flatten()))
-        # visuals
-        self.exp_history.append(grid_ca.copy())
-        self.exp_memory_history.append(short_term_history.copy())
+        # grid_ca and history storage disabled to save memory
+        # (only needed for visualization, not scoring)
 
         self.current_state = self.nca(step).numpy()
+        if self.args is not None:
+            x_cons = apply_conservation(self.current_state, self.args)
+            self.current_state = x_cons.numpy() if hasattr(x_cons, 'numpy') else x_cons
 
         # self.evo_exp.run_step(feed_dict={self.input_connections: step.reshape((-1, 1))})
 
@@ -315,7 +314,7 @@ class ReservoirMemorySingleExperiment:
         # plt.connect('close_event', self.exp.close())
 
 
-def recordingExp(bits, r_total_width, d_period, ca_rule, runs, r, itr, nca):
+def recordingExp(bits, r_total_width, d_period, ca_rule, runs, r, itr, nca, args=None):
     filename = f'nca {datetime.now().isoformat().replace(":", " ")}.txt'
     file = open(filename, "a")
     file.writelines(
@@ -329,11 +328,11 @@ def recordingExp(bits, r_total_width, d_period, ca_rule, runs, r, itr, nca):
         print("starting exp nr" + str(expRun))
         start_time_sub = time.time()
         exp = ReservoirMemorySingleExperiment(bits=bits, r=r, itr=itr, r_total_width=r_total_width, d_period=d_period,
-                                              ca_rule=ca_rule, nca=nca)
+                                              ca_rule=ca_rule, nca=nca, args=args)
         score = exp.run()
         # scoreEval = exp.run(True)
         # exp.show_visuals()
-        exp.save_img(filename)
+        # exp.save_img(filename)  # disabled — saves 32 PNGs per run
         file = open(filename, "a")
         file.write("\n" + str(score) + "\t" + str(exp.input_true_locations))
         # file.write("\n" + str(score) + "\t" + str(exp.input_true_locations) + "\t" + str(scoreEval))
@@ -356,21 +355,16 @@ def recordingExp(bits, r_total_width, d_period, ca_rule, runs, r, itr, nca):
 def get_nca(args, ckpt=""):
     print("Testing checkpoint saved in: " + args.logdir)
 
-    del args.nca_model["built"]
-    del args.nca_model["inputs"]
-    del args.nca_model["outputs"]
-    del args.nca_model["input_names"]
-    del args.nca_model["output_names"]
-    del args.nca_model["stop_training"]
-    del args.nca_model["history"]
-    del args.nca_model["compiled_loss"]
-    del args.nca_model["compiled_metrics"]
-    del args.nca_model["optimizer"]
-    del args.nca_model["train_function"]
-    del args.nca_model["test_function"]
-    del args.nca_model["predict_function"]
-    del args.nca_model["channel_n"]
-    # del args.nca_model["padding_size"]
+    keys_to_delete = ["built", "inputs", "outputs", "input_names", "output_names",
+                      "stop_training", "history", "compiled_loss", "compiled_metrics",
+                      "optimizer", "train_function", "test_function", "predict_function",
+                      "train_tf_function", "padding_size"]
+    for k in keys_to_delete:
+        if k in args.nca_model:
+            del args.nca_model[k]
+    # Also remove channel_n if present (CriticalNCA computes it from hidden_channel_n)
+    if "channel_n" in args.nca_model:
+        del args.nca_model["channel_n"]
 
     nca = CriticalNCA(**args.nca_model)
     nca.dmodel.summary()
@@ -406,14 +400,14 @@ if __name__ == "__main__":
         nca = get_nca(args)
         # train_readout(args)
         bits = 5
-        r_total_width = 80 #64 #160
-        d_period = 200 #200
-        runs = 1
+        r_total_width = 80
+        d_period = 200
+        runs = 100
         ca_rule = 0
 
         r = 4
         itr = 2
-        recordingExp(bits, r_total_width, d_period, ca_rule, runs, r, itr, nca)
+        recordingExp(bits, r_total_width, d_period, ca_rule, runs, r, itr, nca, args)
 
     else:
         print("Add --logdir [path/to/log]")

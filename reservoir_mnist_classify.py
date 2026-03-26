@@ -51,20 +51,25 @@ def load_raw_pixels():
     return x_train, np.squeeze(y_train), x_test, np.squeeze(y_test)
 
 
-def train_and_evaluate(x_train, y_train, x_test, y_test, label=""):
-    print(f"\n── Training LinearSVC [{label}] ─────────────────────────────")
+def train_and_evaluate(x_train, y_train, x_test, y_test, label="", runs=1):
+    print(f"\n── Training LinearSVC [{label}] ({runs} run(s)) ──────────────────")
     print(f"   Train: {x_train.shape}  |  Test: {x_test.shape}")
-    t0 = time.time()
-    clf = LinearSVC(max_iter=5000)
-    clf.fit(x_train, y_train)
-    train_time = time.time() - t0
-    print(f"   Fit time: {train_time:.1f}s")
-
-    y_pred = clf.predict(x_test)
-    acc = accuracy_score(y_test, y_pred)
-    print(f"   Test accuracy: {acc:.4f} ({acc*100:.2f}%)")
-    print(classification_report(y_test, y_pred, digits=4))
-    return acc
+    accs = []
+    for r in range(runs):
+        t0 = time.time()
+        clf = LinearSVC()
+        clf.fit(x_train, y_train)
+        train_time = time.time() - t0
+        y_pred = clf.predict(x_test)
+        acc = accuracy_score(y_test, y_pred)
+        print(f"   Run {r+1}/{runs}  acc={acc:.4f}  fit={train_time:.1f}s")
+        accs.append(acc)
+    mean_acc = np.mean(accs)
+    std_acc  = np.std(accs)
+    print(f"   ── Result: {mean_acc*100:.2f}% ± {std_acc*100:.2f}% (n={runs}) ──")
+    if runs == 1:
+        print(classification_report(y_test, y_pred, digits=4))
+    return mean_acc, std_acc
 
 
 if __name__ == "__main__":
@@ -77,6 +82,8 @@ if __name__ == "__main__":
                         help="Label for this run (e.g. 'baseline' or 'conserving')")
     parser.add_argument("--raw_baseline", action="store_true",
                         help="Also run raw-pixel LinearSVC baseline for comparison")
+    parser.add_argument("--runs", type=int, default=1,
+                        help="Number of repeated SVM runs for mean±std (Sidney uses 10)")
     args = parser.parse_args()
 
     results = {}
@@ -92,8 +99,8 @@ if __name__ == "__main__":
         assert len(x_test) == len(y_test), \
             f"Test size mismatch: CSV has {len(x_test)} rows, MNIST has {len(y_test)}"
 
-        acc_nca = train_and_evaluate(x_train, y_train, x_test, y_test, label=args.label)
-        results[args.label] = acc_nca
+        acc_nca, std_nca = train_and_evaluate(x_train, y_train, x_test, y_test, label=args.label, runs=args.runs)
+        results[args.label] = (acc_nca, std_nca)
     else:
         print(f"CSV not found: {args.train_csv} / {args.test_csv}")
         print("Run reservoir_mnist_make_dataset.py first.")
@@ -101,13 +108,13 @@ if __name__ == "__main__":
     # ── Raw-pixel baseline ─────────────────────────────────────────────────
     if args.raw_baseline:
         x_train_raw, y_train_raw, x_test_raw, y_test_raw = load_raw_pixels()
-        acc_raw = train_and_evaluate(x_train_raw, y_train_raw,
+        acc_raw, std_raw = train_and_evaluate(x_train_raw, y_train_raw,
                                      x_test_raw,  y_test_raw,
-                                     label="raw pixels (baseline)")
-        results["raw_pixels"] = acc_raw
+                                     label="raw pixels (baseline)", runs=args.runs)
+        results["raw_pixels"] = (acc_raw, std_raw)
 
     # ── Summary ────────────────────────────────────────────────────────────
     if len(results) > 1:
         print("\n── Summary ───────────────────────────────────────────────────")
-        for label, acc in results.items():
-            print(f"   {label:<30} {acc:.4f}  ({acc*100:.2f}%)")
+        for label, (acc, std) in results.items():
+            print(f"   {label:<30} {acc*100:.2f}% ± {std*100:.2f}%")

@@ -1,4 +1,4 @@
-# Code based on: https://github.com/DeepCANFR/DeepCA---Hybrid-Deep-Learning-Cellular-Automata-Reservoir/blob/master/ReCA%20parameter%20space/ReCA_X-bit_memory.py
+﻿# Code based on: https://github.com/DeepCANFR/DeepCA---Hybrid-Deep-Learning-Cellular-Automata-Reservoir/blob/master/ReCA%20parameter%20space/ReCA_X-bit_memory.py
 
 import tensorflow as tf
 import numpy as np

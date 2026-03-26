@@ -68,14 +68,14 @@ def get_nca_output_v2(nca, img, width, timesteps, args=None):
 
   x[0, :, 0] = img
 
-  x_history = [x[0,:,0]]
+  x_history = [x[0,:,:].copy()]  # all channels
   for t in range(timesteps-1):
     x = nca(x).numpy()
     if args is not None:
       x = _maybe_numpy(apply_conservation(x, args))
-    x_history.append(x[0,:,0])
+    x_history.append(x[0,:,:].copy())  # all channels
 
-  x_history_arr = np.array(x_history)
+  x_history_arr = np.array(x_history)  # shape: (timesteps, width, channel_n)
 
   return x_history_arr
 
