@@ -1,7 +1,6 @@
 # Training runs — large checkpoint/log data
 baseline_run_2/
 conserving_run_2/
-checkpoint/
 logs/
 
 # Phase 1 & 2 working copies (nested repos / large data)
