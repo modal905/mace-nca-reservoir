@@ -25,6 +25,27 @@ results/*.txt
 # Progress reports (shared via Google Docs / local only)
 MaCE NCA-RC*.md
 PHASE2_BASELINE_VS_CONSERVE_SUMMARY.md
+future_directions_brain_criticality_RC.md
+reproduction_guide.md
+
+# Auxiliary scripts — plotting, animation, diagnostics (local only)
+make_animation.py
+plot_comparison.py
+plot_loss.py
+plot_soc_comparison.py
+diagnose_reservoir.py
+
+# Legacy/superseded scripts
+reservoir_mnist.py
+
+# Convenience shell scripts (commands documented in README)
+run_5bit_all_seeds.sh
+run_gof_baseline.sh
+run_gof_conserve.sh
+run_mnist_all_seeds.sh
+
+# Generated results
+results/
 
 # OS
 .DS_Store
