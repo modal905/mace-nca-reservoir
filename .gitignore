@@ -4,7 +4,8 @@ conserving_run_2/
 checkpoint/
 logs/
 
-# Phase 2 working copies (nested repos)
+# Phase 1 & 2 working copies (nested repos / large data)
+critical-nca-reservoir-Phase 1/
 critical-nca-reservoir-Phase 2/
 
 # Python
@@ -31,12 +32,11 @@ reproduction_guide.md
 # Auxiliary scripts — plotting, animation, diagnostics (local only)
 make_animation.py
 plot_comparison.py
-plot_loss.py
 plot_soc_comparison.py
 diagnose_reservoir.py
 
 # Legacy/superseded scripts
-reservoir_mnist.py
+# (reservoir_mnist.py kept tracked — present in Sidney's original repo)
 
 # Convenience shell scripts (commands documented in README)
 run_5bit_all_seeds.sh
