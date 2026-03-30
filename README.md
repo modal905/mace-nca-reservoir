@@ -38,6 +38,7 @@ train_nca.py                          # Baseline NCA training (CMA-ES)
 train_nca_conserve.py                 # Mass-conserving NCA training
 evaluate_criticality.py               # SOC evaluation & apply_conservation()
 test_nca.py                           # Checkpoint evaluation
+helper.py / utils.py                  # Shared utilities
 reservoir_mnist_make_dataset.py       # Generate NCA reservoir features for MNIST
 reservoir_mnist_classify.py           # LinearSVC readout on NCA features
 reservoir_X-bit_make_dataset.py       # 5-bit memory dataset preparation
@@ -46,22 +47,12 @@ reservoir_cartpole_train_qlearning.py # CartPole Q-learning with NCA reservoir
 reservoir_cartpole_evaluate_rl.py     # CartPole evaluation (100 episodes)
 batch_gof_eval.py                     # GOF sweep across checkpoints
 summarize_gof.py                      # Aggregate GOF results
-diagnose_reservoir.py                 # Reservoir dynamics diagnostics
-make_animation.py                     # Generate CA dynamics animations
-plot_comparison.py                    # Training curve comparison figure
-plot_soc_comparison.py                # SOC / avalanche comparison figure
-run_mnist_all_seeds.sh                # Batch MNIST runs (3 seeds)
-run_5bit_all_seeds.sh                 # Batch 5-bit runs (3 seeds)
-run_gof_baseline.sh / run_gof_conserve.sh  # GOF sweep scripts
-reproduction_guide.md                 # Step-by-step reproduction instructions
-results/                              # Output figures
+checkpoint/                           # Pre-trained NCA weights
 ```
 
 ---
 
 ## Reproduction
-
-See [reproduction_guide.md](reproduction_guide.md) for full step-by-step instructions.
 
 **Train mass-conserving NCA (author scale):**
 ```bash
