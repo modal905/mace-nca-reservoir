@@ -2,7 +2,7 @@
 
 **Mass-Conserving Neural Cellular Automata for Reservoir Computing**
 
-This project extends [Sidney et al.'s critical-nca-reservoir](https://github.com/bioAI-Oslo/critical-nca-reservoir) by introducing a **MaCE-style mass-conserving NCA variant**  a softmax-weighted mass redistribution mechanism that preserves total cell activation across timesteps. The conservation constraint acts as an inductive bias toward the edge of chaos, achieving faster criticality convergence and improved self-organised criticality (SOC) signatures.
+This project extends [Sidney et al.'s critical-nca-reservoir](https://github.com/bioAI-Oslo/critical-nca-reservoir) by introducing a **[MaCE-style mass-conserving NCA](https://github.com/frotaur/MaceLenia) variant** — a softmax-weighted mass redistribution mechanism that preserves total cell activation across timesteps. The conservation constraint acts as an inductive bias toward the edge of chaos, achieving faster criticality convergence and improved self-organised criticality (SOC) signatures.
 
 ---
 
@@ -95,6 +95,6 @@ powerlaw
 
 ## Credits
 
-Built on top of [bioAI-Oslo/critical-nca-reservoir](https://github.com/bioAI-Oslo/critical-nca-reservoir) by Sidney Pontes-Filho et al.
+Built on top of [bioAI-Oslo/critical-nca-reservoir](https://github.com/bioAI-Oslo/critical-nca-reservoir) by Pontes-Filho et al.
 
-The mass-conservation mechanism is inspired by MaCE (Mass-Conserving Lenia) by Etienne Guichard et al. MaCE applies conservation laws to 2D continuous Lenia systems; here we adapt the principle to 1D discrete NCA for reservoir computing.
+The mass-conservation mechanism is inspired by MaCE (Mass-Conserving Lenia) by Guichard et al. MaCE applies conservation laws to 2D continuous Lenia systems; here we adapt the principle to 1D discrete NCA for reservoir computing.

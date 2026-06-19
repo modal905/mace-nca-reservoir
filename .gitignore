@@ -42,6 +42,7 @@ run_5bit_all_seeds.sh
 run_gof_baseline.sh
 run_gof_conserve.sh
 run_mnist_all_seeds.sh
+run_additional_seeds.sh
 
 # Generated results
 results/
@@ -49,3 +50,7 @@ results/
 # OS
 .DS_Store
 Thumbs.db
+
+# Review copies (private — don't sync)
+reviews/
+reviews/*.txt
