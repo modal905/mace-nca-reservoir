@@ -93,3 +93,10 @@ powerlaw
 
 ---
 
+## Paper
+
+For the full methodology, theoretical analysis, and additional experiments, see our paper:
+
+**arXiv:** https://arxiv.org/abs/2606.23115
+
+---
